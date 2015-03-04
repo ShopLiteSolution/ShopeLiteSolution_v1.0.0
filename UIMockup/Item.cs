@@ -11,5 +11,8 @@ namespace UIMockup
         public string Name { get; set; }
         public double Price { get; set; }
         public int Unit { get; set; }
+        public string toString() { 
+            return "Item: " + Name  + " , Unit: " + Unit + " , Price: " + Price;
+        }
     }
 }

@@ -6,17 +6,18 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <Button Content="Ask for Assistance" HorizontalAlignment="Left" Margin="40,503,0,0" VerticalAlignment="Top" Width="121" Height="32" Click="Button_Click">
-        </Button>
-        <ListView Name="myList" HorizontalAlignment="Left" Height="445" VerticalAlignment="Top" Width="712" Margin="40,30,0,0">
+        
+        <ListView Name="myList" HorizontalAlignment="Center" Height="445" VerticalAlignment="Top" Width="712" Margin="40,30,0,0">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Width="150" Header="Item" DisplayMemberBinding="{Binding Name}"/>
-                    <GridViewColumn Width="150" Header="Unit" DisplayMemberBinding="{Binding Unit}"/>
-                    <GridViewColumn Width="150" Header="Price" DisplayMemberBinding="{Binding Price}"/>
+                    <GridViewColumn Width="150" Header="Item" DisplayMemberBinding="{Binding Path=Name}"/>
+                    <GridViewColumn Width="150" Header="Unit" DisplayMemberBinding="{Binding Path=Unit}"/>
+                    <GridViewColumn Width="150" Header="Price" DisplayMemberBinding="{Binding Path=Price}"/>
                 </GridView>
             </ListView.View>
         </ListView>
+        
+        <Button Content="Ask for Assistance" HorizontalAlignment="Left" Margin="40,503,0,0" VerticalAlignment="Top" Width="121" Height="32" Click="Button_Click"/>
         <Button Content="Check Out" HorizontalAlignment="Left" Margin="631,503,0,0" VerticalAlignment="Top" Width="121" Height="32" Click="Button_Click"/>
 
     </Grid>

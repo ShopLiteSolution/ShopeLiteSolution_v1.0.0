@@ -20,24 +20,30 @@ namespace UIMockup
     /// </summary>
     public partial class MainWindow : Window
     {
-        private List<Item> itemlist = new List<Item>();
+        private List<Item> itemlist;
         public MainWindow()
         {
             InitializeComponent();
+            Init();
             InitItemList();
             InitGridView();
         }
 
+        public void Init() {
+            itemlist = new List<Item>();
+        }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            Console.Out.WriteLine("Button clicked");
+            Item apple = new Item() { Name = "alkex", Price = 0.49d, Unit = 1 };
+            itemlist.Add(apple);
+            refreshGrid();
         }
 
         public void InitItemList()
         {
-            Item apple = new Item() { Name = "apple", Price = 0.49d, Unit = 1 };
-            Item coke = new Item() { Name = "coke", Price = 0.99d, Unit = 1 };
-            Item waterbottle = new Item() { Name = "waterbottle", Price = 5.49d, Unit = 1 };
+            Item apple = new Item() { Name = "Apple", Price = 0.49d, Unit = 1};
+            Item coke = new Item() { Name = "Coke", Price = 0.99d, Unit = 1 };
+            Item waterbottle = new Item(){ Name = "Water Bottle", Price = 5.49d, Unit = 1};
 
             itemlist.Add(apple);
             itemlist.Add(coke);
@@ -46,8 +52,14 @@ namespace UIMockup
 
         public void InitGridView()
         {
-            myList.ItemsSource = itemlist;
+            GridView view = new GridView(); 
+            refreshGrid();
+        }
 
+        private void refreshGrid()
+        {
+            myList.ItemsSource = null;
+            myList.ItemsSource = itemlist;
         }
     }
 }
