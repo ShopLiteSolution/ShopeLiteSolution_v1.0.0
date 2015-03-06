@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Data.SqlClient;
 
 namespace UIMockup
 {
@@ -21,12 +22,14 @@ namespace UIMockup
     public partial class MainWindow : Window
     {
         private List<Item> itemlist;
+
         public MainWindow()
         {
             InitializeComponent();
             Init();
             InitItemList();
-            InitGridView();
+            InitListView();
+            //((App)Application.Current).getSQLConnection
         }
 
         public void Init() {
@@ -50,9 +53,9 @@ namespace UIMockup
             itemlist.Add(waterbottle);
         }
 
-        public void InitGridView()
+        public void InitListView()
         {
-            GridView view = new GridView(); 
+
             refreshGrid();
         }
 
