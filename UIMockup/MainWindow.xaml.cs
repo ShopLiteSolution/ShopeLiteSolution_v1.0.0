@@ -55,7 +55,6 @@ namespace UIMockup
 
         public void InitListView()
         {
-
             refreshGrid();
         }
 
