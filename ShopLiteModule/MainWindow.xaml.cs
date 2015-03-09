@@ -20,10 +20,33 @@ namespace ShopLiteModule
     /// </summary>
     public partial class MainWindow : Window
     {
+        private DBConnection con;
         public MainWindow()
         {
             InitializeComponent();
+            initDB();
+            refreshList();
         }
+
+        private void CheckoutBtn_clicked(object sender, RoutedEventArgs e)
+        {
+        }
+
+        private void AskforassistBtn_clicked(object sender, RoutedEventArgs e)
+        {
+            refreshList();
+        }
+
+        private void initDB()
+        {
+            con = new DBConnection();   
+        }
+
+        private void refreshList() {
+            myList.ItemsSource = null;
+            myList.ItemsSource = con.MyDataTable("SELECT * FROM Itemlist").DefaultView;
+        }
+
     }
     //hello world
 }
