@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Data;
 
 namespace ShopLiteModule
 {
@@ -24,6 +25,7 @@ namespace ShopLiteModule
         public MainWindow()
         {
             InitializeComponent();
+            initImage();
             initDB();
             refreshList();
         }
@@ -42,11 +44,27 @@ namespace ShopLiteModule
             con = new DBConnection();   
         }
 
+        private void initImage()
+        {
+            LogoImage.Source = new BitmapImage(new Uri(@"/resources/ShopLiteSolutionLogo.jpg", UriKind.Relative));
+        }
         private void refreshList() {
             myList.ItemsSource = null;
-            myList.ItemsSource = con.MyDataTable("SELECT * FROM Itemlist").DefaultView;
+            DataTable data = con.MyDataTable("SELECT * FROM Itemlist");
+            myList.ItemsSource = data.DefaultView;
+            TotalPriceLbl.Content = calculateTotalPrice(data);
+            //Console.Out.WriteLine(data.Rows[0]["Price"]);
+        }
+
+        private string calculateTotalPrice(DataTable data) { 
+            string output = "";
+            double sum = 0.0d;
+            foreach(DataRow row in data.Rows){
+                sum += Double.Parse(System.Convert.ToString(row["Price"]));
+            }
+            output = System.Convert.ToString(sum);
+            return output;
         }
 
     }
-    //hello world
 }
