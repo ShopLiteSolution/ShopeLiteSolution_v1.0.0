@@ -85,7 +85,7 @@ namespace ShopLiteModule
                 _cancelEvent.WaitOne();
                 Console.Out.WriteLine("cancel event returned to main thread");
                 cancelBtn.Visibility = Visibility.Hidden;
-                TimerStatusLbl.Content = "Scanning  !";
+                TimerStatusLbl.Content = "Scanning cancelled!";
                 Timer.Value = 0;
             }
         }
