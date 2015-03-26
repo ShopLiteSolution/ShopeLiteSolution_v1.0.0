@@ -26,13 +26,45 @@ namespace ShopLiteModule
     {
         private DBConnection con;
         private BackgroundWorker worker;
+        private AutoResetEvent _cancelEvent;
 
         public MainWindow()
         {
+            _cancelEvent = new AutoResetEvent(false);
             InitializeComponent();
             initImage();
             initDB();
             initBgWorker();
+        }
+
+        private void initDB()
+        {
+            con = new DBConnection();
+            refreshList();
+        }
+
+        private void initImage()
+        {
+            LogoImage.Source = new BitmapImage(new Uri(@"/resources/ShopLiteSolutionLogo.jpg", UriKind.Relative));
+        }
+
+        private void initBgWorker()
+        {
+            if (worker != null && worker.IsBusy)
+            {
+                worker.CancelAsync();
+                _cancelEvent.WaitOne();
+            }
+
+            worker = new BackgroundWorker();
+
+            worker.WorkerReportsProgress = true;
+            worker.WorkerSupportsCancellation = true;
+            worker.DoWork += _workerDoWork;
+            worker.ProgressChanged += _workerProgressChanged;
+            worker.RunWorkerCompleted += _workerJobComplete;
+
+            worker.RunWorkerAsync();
         }
 
         private void checkoutBtnClicked(object sender, RoutedEventArgs e)
@@ -46,23 +78,23 @@ namespace ShopLiteModule
 
         private void cancelBtnClicked(object sender, RoutedEventArgs e)
         {
-            worker.CancelAsync();
+            if (worker != null && worker.IsBusy)
+            {
+                Console.Out.WriteLine("cancel button clicked"); 
+                worker.CancelAsync();
+                _cancelEvent.WaitOne();
+                Console.Out.WriteLine("cancel event returned to main thread");
+                cancelBtn.Visibility = Visibility.Hidden;
+                TimerStatusLbl.Content = "Scanning  !";
+                Timer.Value = 0;
+            }
         }
+
         private void AskforassistBtn_clicked(object sender, RoutedEventArgs e)
         {
             refreshList();
         }
 
-        private void initDB()
-        {
-            con = new DBConnection();
-            refreshList();
-        }
-
-        private void initImage()
-        {
-            LogoImage.Source = new BitmapImage(new Uri(@"/resources/ShopLiteSolutionLogo.jpg", UriKind.Relative));
-        }
         private void refreshList() {
             myList.ItemsSource = null;
             DataTable data = con.MyDataTable("SELECT * FROM Itemlist");
@@ -76,21 +108,6 @@ namespace ShopLiteModule
             myList.ItemsSource = null;
             myList.ItemsSource = data.DefaultView;
             TotalPriceLbl.Content = calculateTotalPrice(data);
-        }
-
-        private void initBgWorker(){
-            worker = new BackgroundWorker();
-
-            worker.WorkerReportsProgress = true;
-            worker.WorkerSupportsCancellation = true;
-            worker.DoWork += _workerDoWork;
-            worker.ProgressChanged += _workerProgressChanged;
-            worker.RunWorkerCompleted += _workerJobComplete;
-
-            TimerStatusLbl.Content = "Scanning...";
-            cancelBtn.Visibility = Visibility.Visible;
-
-            worker.RunWorkerAsync();
         }
 
         private string calculateTotalPrice(DataTable data) { 
@@ -111,6 +128,7 @@ namespace ShopLiteModule
                 if (worker.CancellationPending == true)
                 {
                     e.Cancel = true;
+                    _cancelEvent.Set();
                     break;
                 }
                 else
@@ -123,13 +141,14 @@ namespace ShopLiteModule
                     Thread.Sleep(100);
                 }
             }
+
+            worker = null;
         }
         private void _workerJobComplete(object sender, RunWorkerCompletedEventArgs e)
         {
             if (e.Cancelled == true)
             {
-                TimerStatusLbl.Content = "Scanning cancelled!";
-                Timer.Value = 0;
+
             }
             else if (!(e.Error == null))
             {
@@ -138,14 +157,25 @@ namespace ShopLiteModule
             else
             {
                 TimerStatusLbl.Content = "Finished scanning.";
+                cancelBtn.Visibility = Visibility.Hidden;
             }
-
-            cancelBtn.Visibility = Visibility.Hidden;
         }
 
         private void _workerProgressChanged(object sender, ProgressChangedEventArgs e)
         {
+            if (e.ProgressPercentage < 100 && e.ProgressPercentage > 0 && !(sender as BackgroundWorker).CancellationPending)
+            {
+                TimerStatusLbl.Content = "Scanning...";
+                cancelBtn.Visibility = Visibility.Visible;
+            }
             Timer.Value = e.ProgressPercentage;
+
+            if ((sender as BackgroundWorker).CancellationPending)
+            {
+                //TODO: clean the list view
+            }
+            
+
         }
     }
 }
