@@ -57,6 +57,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="CCommondMethod.cs" />
+    <Compile Include="DefaultSettings.cs" />
+    <Compile Include="ReaderConnection.cs" />
+    <Compile Include="ReaderSetting.cs" />
+    <Compile Include="ScaleConnection.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -101,6 +106,12 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="resources\ShopLiteSolutionLogo.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Reader\Reader.csproj">
+      <Project>{26b6aaee-3512-42d9-835e-ea9b4a699cb4}</Project>
+      <Name>Reader</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
