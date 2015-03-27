@@ -34,9 +34,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Reader, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>lib\Reader.dll</HintPath>
+    </Reference>
     <Reference Include="SQLite.NET, Version=0.21.1869.3794, Culture=neutral, PublicKeyToken=c273bd375e695f9c">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\SQLite.NET.dll</HintPath>
+      <HintPath>lib\SQLite.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -110,11 +114,12 @@
   <ItemGroup>
     <Resource Include="resources\ShopLiteSolutionLogo.jpg" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <ProjectReference Include="..\Reader\Reader.csproj">
-      <Project>{26b6aaee-3512-42d9-835e-ea9b4a699cb4}</Project>
-      <Name>Reader</Name>
-    </ProjectReference>
+    <Content Include="lib\Reader.dll" />
+    <Content Include="lib\SQLite.dll" />
+    <Content Include="lib\SQLite.NET.dll" />
+    <Content Include="lib\SQLite3.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
