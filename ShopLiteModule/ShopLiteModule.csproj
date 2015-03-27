@@ -59,6 +59,9 @@
     </ApplicationDefinition>
     <Compile Include="CCommondMethod.cs" />
     <Compile Include="DefaultSettings.cs" />
+    <Compile Include="InventoryBuffer.cs" />
+    <Compile Include="OperateTagBuffer.cs" />
+    <Compile Include="OperateTagISO18000Buffer.cs" />
     <Compile Include="ReaderConnection.cs" />
     <Compile Include="ReaderSetting.cs" />
     <Compile Include="ScaleConnection.cs" />

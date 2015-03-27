@@ -27,10 +27,13 @@ namespace ShopLiteModule
         private DBConnection con;
         private BackgroundWorker worker;
         private AutoResetEvent _cancelEvent;
+        private ReaderConnection rCon;
 
         public MainWindow()
         {
             _cancelEvent = new AutoResetEvent(false);
+            rCon = new ReaderConnection();
+
             InitializeComponent();
             initImage();
             initDB();
@@ -61,6 +64,7 @@ namespace ShopLiteModule
             worker.WorkerReportsProgress = true;
             worker.WorkerSupportsCancellation = true;
             worker.DoWork += _workerDoWork;
+            worker.DoWork += rCon.shopLite_load;
             worker.ProgressChanged += _workerProgressChanged;
             worker.RunWorkerCompleted += _workerJobComplete;
 
