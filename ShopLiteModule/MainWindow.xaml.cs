@@ -32,7 +32,6 @@ namespace ShopLiteModule
         public MainWindow()
         {
             _cancelEvent = new AutoResetEvent(false);
-            rCon = new ReaderConnection();
 
             InitializeComponent();
             initImage();
@@ -59,12 +58,12 @@ namespace ShopLiteModule
                 _cancelEvent.WaitOne();
             }
 
+            rCon = new ReaderConnection();
             worker = new BackgroundWorker();
 
             worker.WorkerReportsProgress = true;
             worker.WorkerSupportsCancellation = true;
             worker.DoWork += _workerDoWork;
-            worker.DoWork += rCon.shopLite_load;
             worker.ProgressChanged += _workerProgressChanged;
             worker.RunWorkerCompleted += _workerJobComplete;
 
@@ -141,6 +140,10 @@ namespace ShopLiteModule
                     // use Reader.dll to scan tags
                     // check db with serialIDs
                     // refresh the list: refreshList(DataTable data)
+                    if (i % 10 == 0)
+                    {
+                        rCon.RealTimeInventory();
+                    }
                     worker.ReportProgress(i);
                     Thread.Sleep(100);
                 }
@@ -163,6 +166,7 @@ namespace ShopLiteModule
                 TimerStatusLbl.Content = "Finished scanning.";
                 cancelBtn.Visibility = Visibility.Hidden;
             }
+            rCon.DisconnectTcp();
         }
 
         private void _workerProgressChanged(object sender, ProgressChangedEventArgs e)
