@@ -14,9 +14,9 @@ namespace ShopLiteModule
         public const int ConReader_Msk = 0x01;
         public const int SetPwr_Msk = 0x02;
         public const int SetFreq_Msk = 0x04;
-        public const int SetWrkAntanna_Msk = 0x08;
 
-        //public static const int Connect_Msk = 0x10;
+        public SyncedSet<string> existTags;
+        
         public int status;
 
         private Reader.ReaderMethod reader;
@@ -27,26 +27,18 @@ namespace ShopLiteModule
         private OperateTagISO18000Buffer m_curOperateTagISO18000Buffer = new OperateTagISO18000Buffer();
 
         private bool m_bInventory = false;
-        private bool m_bReckonTime = false;
         private bool m_bLockTab = false;
-        private bool m_bContinue = false;
-        private bool m_bDisplayLog = false;
-        private int m_nLoopTimes = 0;
-        private int m_nBytes = 0;
-        private int m_nLoopedTimes = 0;
         private int m_nTotal = 0;
 
         private byte[] m_btAryData = new byte[10];
 
-        private int m_nSwitchTotal = 0;
-        private int m_nSwitchTime = 0;
-
         public ReaderConnection()
         {
             status = 0;
+            existTags = new SyncedSet<string>();
+            existTags.Added += new AddEventHandler(newTagDetected);
             reader = new Reader.ReaderMethod();
 
-            //Console.Out.WriteLine("intialize reader callbacks");
             reader.AnalyCallback = AnalyData;
             reader.ReceiveCallback = ReceiveData;
             reader.SendCallback = SendData;
@@ -68,16 +60,6 @@ namespace ShopLiteModule
                 Thread.Sleep(500);
             }
         }
-/*        public void shopLite_load()
-        {
-            RealTimeInventory();
-            for (int i = 0; i < 100; i++)
-            {
-                RealTimeInventory();
-                Thread.Sleep(1000); //NTBF
-            }
-        }
-*/
 
         public void DisconnectTcp()
         {
@@ -423,7 +405,7 @@ namespace ShopLiteModule
                             int nCaculatedReadRate = 0;
                             int nCommandDuation = 0;
 
-                            if (m_curInventoryBuffer.nReadRate == 0) //读写器没有返回速度前软件测速度
+                            if (m_curInventoryBuffer.nReadRate == 0) 
                             {
                                 if (nTotalTime > 0)
                                 {
@@ -521,6 +503,10 @@ namespace ShopLiteModule
         {
             string strLog = CCommondMethod.ByteArrayToString(btArySendData, 0, btArySendData.Length);
             //Console.Out.WriteLine(strLog);
+        }
+        
+        private void newTagDetected(object sender, SetAddEventArgs e) {
+            Console.Out.WriteLine("new tag is detected");
         }
     }
 }
