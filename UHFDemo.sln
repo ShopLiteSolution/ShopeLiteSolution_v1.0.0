@@ -12,6 +12,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopLiteSolution", "UIMockup\ShopLiteSolution.csproj", "{296C0681-AEB0-4E91-87C6-128C075D12C0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopLiteModule", "ShopLiteModule\ShopLiteModule.csproj", "{80778480-B91A-4763-8F92-DBD2B8BD5FEF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{26B6AAEE-3512-42D9-835E-EA9B4A699CB4} = {26B6AAEE-3512-42D9-835E-EA9B4A699CB4}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

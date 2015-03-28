@@ -34,9 +34,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Reader, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>lib\Reader.dll</HintPath>
+    </Reference>
     <Reference Include="SQLite.NET, Version=0.21.1869.3794, Culture=neutral, PublicKeyToken=c273bd375e695f9c">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\SQLite.NET.dll</HintPath>
+      <HintPath>lib\SQLite.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -57,6 +61,16 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="CCommondMethod.cs" />
+    <Compile Include="SetAddEventArgs.cs" />
+    <Compile Include="DefaultSettings.cs" />
+    <Compile Include="InventoryBuffer.cs" />
+    <Compile Include="OperateTagBuffer.cs" />
+    <Compile Include="OperateTagISO18000Buffer.cs" />
+    <Compile Include="ReaderConnection.cs" />
+    <Compile Include="ReaderSetting.cs" />
+    <Compile Include="ScaleConnection.cs" />
+    <Compile Include="SyncedSet.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -101,6 +115,13 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="resources\ShopLiteSolutionLogo.jpg" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="lib\Reader.dll" />
+    <Content Include="lib\SQLite.dll" />
+    <Content Include="lib\SQLite.NET.dll" />
+    <Content Include="lib\SQLite3.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
