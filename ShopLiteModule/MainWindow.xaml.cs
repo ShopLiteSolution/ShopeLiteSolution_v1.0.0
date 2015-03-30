@@ -16,6 +16,7 @@ using System.Data;
 using System.Threading;
 using System.ComponentModel;
 using System.Globalization;
+using System.Collections.ObjectModel;
 
 namespace ShopLiteModule
 {
@@ -28,15 +29,26 @@ namespace ShopLiteModule
         private BackgroundWorker worker;
         private AutoResetEvent _cancelEvent;
         private ReaderConnection rCon;
+        private ObservableCollection<Item> itemList;
+        private double totalPrice;
 
         public MainWindow()
         {
-            _cancelEvent = new AutoResetEvent(false);
-
             InitializeComponent();
+
+            _cancelEvent = new AutoResetEvent(false);
+            itemList = new ObservableCollection<Item>();
+            totalPrice = 0.0d;
+
+            CancelBtn.IsEnabled = false;
+            RescanBtn.IsEnabled = false;
+            TimerStatusLbl.Content = "Welcome!";
             initImage();
             initDB();
-            initBgWorker();
+        }
+        private void OnAfterContentRendered(object sender, EventArgs e)
+        {
+            initReaderConnection();
         }
 
         private void initDB()
@@ -44,12 +56,15 @@ namespace ShopLiteModule
             con = new DBConnection();
             refreshList();
         }
-
         private void initImage()
         {
             LogoImage.Source = new BitmapImage(new Uri(@"/resources/ShopLiteSolutionLogo.jpg", UriKind.Relative));
         }
-
+        private void initReaderConnection()
+        {
+            rCon = new ReaderConnection();
+            rCon.Added += new AddEventHandler(newTagDetected);
+        }
         private void initBgWorker()
         {
             if (worker != null && worker.IsBusy)
@@ -58,7 +73,6 @@ namespace ShopLiteModule
                 _cancelEvent.WaitOne();
             }
 
-            rCon = new ReaderConnection();
             worker = new BackgroundWorker();
 
             worker.WorkerReportsProgress = true;
@@ -72,13 +86,20 @@ namespace ShopLiteModule
 
         private void checkoutBtnClicked(object sender, RoutedEventArgs e)
         {
+            //TODO
         }
-
         private void rescanBtnClicked(object sender, RoutedEventArgs e)
         {
+            Console.Out.WriteLine("rescan button is clicked");
+            if (rCon.isReading()) rCon.stopReader();
+
+            itemList = new ObservableCollection<Item>();
+            totalPrice = 0.0d;
+            refreshList();
+            rCon.existTags.Clear();
+
             initBgWorker();
         }
-
         private void cancelBtnClicked(object sender, RoutedEventArgs e)
         {
             if (worker != null && worker.IsBusy)
@@ -86,8 +107,9 @@ namespace ShopLiteModule
                 Console.Out.WriteLine("cancel button clicked"); 
                 worker.CancelAsync();
                 _cancelEvent.WaitOne();
-                Console.Out.WriteLine("cancel event returned to main thread");
-                cancelBtn.Visibility = Visibility.Hidden;
+
+                rCon.stopReader();
+                CancelBtn.IsEnabled = false;
                 TimerStatusLbl.Content = "Scanning cancelled!";
                 Timer.Value = 0;
             }
@@ -95,15 +117,13 @@ namespace ShopLiteModule
 
         private void AskforassistBtn_clicked(object sender, RoutedEventArgs e)
         {
-            refreshList();
+            initBgWorker();
         }
 
-        private void refreshList() {
+        private void refreshList()
+        {
             myList.ItemsSource = null;
-            DataTable data = con.MyDataTable("SELECT * FROM Itemlist");
-            myList.ItemsSource = data.DefaultView;
-            TotalPriceLbl.Content = calculateTotalPrice(data);
-            //Console.Out.WriteLine(data.Rows[0]["Price"]);
+            myList.ItemsSource = itemList;
         }
 
         private void refreshList(DataTable data)
@@ -117,7 +137,7 @@ namespace ShopLiteModule
             string output = "";
             double sum = 0.0d;
             foreach(DataRow row in data.Rows){
-                sum += Double.Parse(System.Convert.ToString(row["Price"]));
+                sum += Double.Parse(Convert.ToString(row["Price"]));
             }
             output = sum.ToString("C2", CultureInfo.CurrentCulture);
             return output;
@@ -136,10 +156,6 @@ namespace ShopLiteModule
                 }
                 else
                 {
-                    // TODO:
-                    // use Reader.dll to scan tags
-                    // check db with serialIDs
-                    // refresh the list: refreshList(DataTable data)
                     if (i % 10 == 0)
                     {
                         rCon.RealTimeInventory();
@@ -155,7 +171,6 @@ namespace ShopLiteModule
         {
             if (e.Cancelled == true)
             {
-
             }
             else if (!(e.Error == null))
             {
@@ -164,9 +179,9 @@ namespace ShopLiteModule
             else
             {
                 TimerStatusLbl.Content = "Finished scanning.";
-                cancelBtn.Visibility = Visibility.Hidden;
+                CancelBtn.IsEnabled = false;
+                rCon.stopReader();
             }
-            rCon.DisconnectTcp();
         }
 
         private void _workerProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -174,7 +189,8 @@ namespace ShopLiteModule
             if (e.ProgressPercentage < 100 && e.ProgressPercentage > 0 && !(sender as BackgroundWorker).CancellationPending)
             {
                 TimerStatusLbl.Content = "Scanning...";
-                cancelBtn.Visibility = Visibility.Visible;
+                CancelBtn.IsEnabled = true;
+                RescanBtn.IsEnabled = true;
             }
             Timer.Value = e.ProgressPercentage;
 
@@ -182,8 +198,30 @@ namespace ShopLiteModule
             {
                 //TODO: clean the list view
             }
-            
+        }
 
+        private void newTagDetected(object sender, SetAddEventArgs e)
+        {
+            //Console.Out.WriteLine("UI gets event: " + e.newEntry as string);
+            DataTable newItems = con.MyDataTable("SELECT * FROM Itemlist where SerialID = \"" + e.newEntry as string + "\"");
+            Item newItem;
+            foreach (DataRow row in newItems.Rows)
+            {
+                newItem = new Item();
+                newItem.SerialID = (string)row.ItemArray[0];
+                newItem.Name = (string)row.ItemArray[1];
+                newItem.Price = (double)row.ItemArray[2];
+                newItem.Quantity = Int32.Parse((string)row.ItemArray[3]);
+                newItem.Weight = Double.Parse((string)row.ItemArray[4]);
+
+                totalPrice += newItem.Price;
+                App.Current.Dispatcher.Invoke((Action)delegate
+                {
+                    itemList.Add(newItem);
+                    TotalPriceLbl.Content = totalPrice.ToString("C2", CultureInfo.CurrentCulture);
+                });
+                //Thread.Sleep(200);
+            }
         }
     }
 }

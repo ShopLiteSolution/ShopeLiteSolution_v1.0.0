@@ -21,7 +21,7 @@ namespace ShopLiteModule
 
         public bool AddSafe(T item)
         {
-            bool result = base.Add(item);
+            bool result = base.Add(item); 
             OnAdded(new SetAddEventArgs(item));
             return result;
         }

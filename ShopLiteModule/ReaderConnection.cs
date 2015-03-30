@@ -16,7 +16,9 @@ namespace ShopLiteModule
         public const int SetFreq_Msk = 0x04;
 
         public SyncedSet<string> existTags;
-        
+        //this class also has an added event so UI can listen to it
+        public event AddEventHandler Added; 
+
         public int status;
 
         private Reader.ReaderMethod reader;
@@ -33,7 +35,7 @@ namespace ShopLiteModule
         private byte[] m_btAryData = new byte[10];
 
         public ReaderConnection()
-        {
+        {            
             status = 0;
             existTags = new SyncedSet<string>();
             existTags.Added += new AddEventHandler(newTagDetected);
@@ -42,9 +44,17 @@ namespace ShopLiteModule
             reader.AnalyCallback = AnalyData;
             reader.ReceiveCallback = ReceiveData;
             reader.SendCallback = SendData;
+           
+            setup();   
+        }
 
+        public void setup()
+        {
             ConnectTcp();
             waitForStatus(ConReader_Msk);
+
+            //ResetReader();
+            //waitForStatus(RstReader_Msk);
 
             SetOutputPower(DefaultSettings.OutputPower);
             waitForStatus(SetPwr_Msk);
@@ -55,16 +65,19 @@ namespace ShopLiteModule
 
         public void waitForStatus(int mask)
         {
+            //Console.Out.WriteLine("Current status: " + status + ", current mask: " + mask);
             while ((status & mask) == 0)
             {
+                //Console.Out.WriteLine("Before sleep: Current status: " + status + ", current mask: " + mask);
                 Thread.Sleep(500);
+                //Console.Out.WriteLine("After sleep: Current status: " + status + ", current mask: " + mask);
             }
         }
 
         public void DisconnectTcp()
         {
             reader.SignOut();
-            System.Console.WriteLine("reader signout");
+            Console.WriteLine("reader signout");
         }
         public void ConnectTcp()
         {
@@ -84,17 +97,17 @@ namespace ShopLiteModule
                 else
                 {
                     string strLog = "Reader connect succeeded: " + ipAddress.ToString() + ":" + nPort.ToString();
-                    System.Console.WriteLine(strLog);
+                    Console.WriteLine(strLog);
                 }
             }
             catch (System.Exception ex)
             {
-                System.Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.Message);
             }
 
             status |= ConReader_Msk;
         }
-        private void ResetReader()
+        public void ResetReader()
         {
             int nRet = reader.Reset(m_curSetting.btReadId);
             if (nRet != 0)
@@ -108,6 +121,7 @@ namespace ShopLiteModule
         }
         private void SetOutputPower(string txtOutputPower)
         {
+            Console.Out.WriteLine("trying to set output power");
             try
             {
                 if (txtOutputPower.Length != 0)
@@ -202,11 +216,21 @@ namespace ShopLiteModule
             {
                 Console.Out.WriteLine(ex.Message);
             }
-
-
         }
 
+        public void stopReader()
+        {
+            m_curInventoryBuffer.ClearInventoryPar();
+            m_curInventoryBuffer.bLoopCustomizedSession = false;
+            m_bInventory = false;
+            m_curInventoryBuffer.bLoopInventory = false;
+            m_bLockTab = false;
+        }
 
+        public bool isReading()
+        {
+            return m_bInventory == true ? true : false;
+        }
         private void AnalyData(Reader.MessageTran msgTran)
         {
             if (msgTran.PacketType != 0xA0)
@@ -223,6 +247,9 @@ namespace ShopLiteModule
                     break;
                 case 0x78:
                     ProcessSetFrequencyRegion(msgTran);
+                    break;
+                case 0x70:
+                    Console.Out.WriteLine("0x70 event is received");
                     break;
                 case 0x89:
                 case 0x8B:
@@ -358,7 +385,7 @@ namespace ShopLiteModule
                 m_curInventoryBuffer.nDataCount = Convert.ToInt32(msgTran.AryData[3]) * 256 * 256 * 256 +
                     Convert.ToInt32(msgTran.AryData[4]) * 256 * 256 + Convert.ToInt32(msgTran.AryData[5]) * 256 + Convert.ToInt32(msgTran.AryData[6]);
 
-                Console.Out.WriteLine(strCmd);
+                //Console.Out.WriteLine(strCmd);
                 RefreshInventoryReal(0x01);
                 RunLoopInventroy();
             }
@@ -369,7 +396,10 @@ namespace ShopLiteModule
                 int nEpcLength = nLength - 4;
 
                 string strEPC = CCommondMethod.ByteArrayToStringNoSpace(msgTran.AryData, 3, nEpcLength);
-                Console.Out.WriteLine("StrEPC = " + strEPC);
+                if (!existTags.Contains(strEPC))
+                {
+                    existTags.AddSafe(strEPC);
+                }
                 string strPC = CCommondMethod.ByteArrayToString(msgTran.AryData, 1, 2);
                 string strRSSI = msgTran.AryData[nLength - 1].ToString();
                 byte btTemp = msgTran.AryData[0];
@@ -384,14 +414,15 @@ namespace ShopLiteModule
             }
         }
 
+        private delegate void RefreshInventoryRealUnsafe(byte btCmd);
         private void RefreshInventoryReal(byte btCmd)
         {
-            /*if (this.InvokeRequired)
+            if (!App.Current.Dispatcher.CheckAccess())
             {
-                // RefreshInventoryRealUnsafe InvokeRefresh = new RefreshInventoryRealUnsafe(RefreshInventoryReal);
-                // this.Invoke(InvokeRefresh, new object[] { btCmd });
-            }*/
-            //else
+                RefreshInventoryRealUnsafe InvokeRefresh = new RefreshInventoryRealUnsafe(RefreshInventoryReal);
+                App.Current.Dispatcher.Invoke(InvokeRefresh, new object[] { btCmd });
+            }
+            else
             {
                 switch (btCmd)
                 {
@@ -434,17 +465,12 @@ namespace ShopLiteModule
         private delegate void RunLoopInventoryUnsafe();
         private void RunLoopInventroy()
         {
- /*           if (this.InvokeRequired)
+            if (!App.Current.Dispatcher.CheckAccess())
             {
                 RunLoopInventoryUnsafe InvokeRunLoopInventory = new RunLoopInventoryUnsafe(RunLoopInventroy);
-                this.Invoke(InvokeRunLoopInventory, new object[] { });
-            }*/ //TODO: Check
-            /*if (!Dispatcher.CheckAccess())
-            {
-                RunLoopInventoryUnsafe InvokeRunLoopInventory = new RunLoopInventoryUnsafe(RunLoopInventroy);
-                Dispatcher.Invoke(InvokeRunLoopInventory, arg);
-            }*/
-            //else
+                App.Current.Dispatcher.Invoke(InvokeRunLoopInventory, new object[] { });
+            }
+            else
             {
                 if (m_curInventoryBuffer.nIndexAntenna < m_curInventoryBuffer.lAntenna.Count - 1 || m_curInventoryBuffer.nCommond == 0)
                 {
@@ -495,18 +521,24 @@ namespace ShopLiteModule
 
         private void ReceiveData(byte[] btAryReceiveData)
         {
-            string strLog = CCommondMethod.ByteArrayToString(btAryReceiveData, 0, btAryReceiveData.Length);
-            //Console.Out.WriteLine(strLog);
         }
 
         private void SendData(byte[] btArySendData)
         {
-            string strLog = CCommondMethod.ByteArrayToString(btArySendData, 0, btArySendData.Length);
-            //Console.Out.WriteLine(strLog);
         }
         
         private void newTagDetected(object sender, SetAddEventArgs e) {
-            Console.Out.WriteLine("new tag is detected");
+            //Console.Out.WriteLine("rCon gets event: " + e.newEntry as string);
+            //pass the event to UI
+            OnAdded(e);
+        }
+
+        protected virtual void OnAdded(SetAddEventArgs e)
+        {
+            if (Added != null)
+            {
+                Added(this, e);
+            }
         }
     }
 }

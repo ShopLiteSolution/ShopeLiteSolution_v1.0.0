@@ -1,17 +1,18 @@
 ﻿<Window x:Class="ShopLiteModule.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ShopLite Solution" Height="600" Width="800">
+        Title="ShopLite Solution" Height="600" Width="800"
+        ContentRendered="OnAfterContentRendered">
     <Grid>
         <Button Content="Ask for assistant" HorizontalAlignment="Left" Margin="50,455,0,0" VerticalAlignment="Top" Width="125" Height="35" Click="AskforassistBtn_clicked"/>
-        <Button Content="Rescan" HorizontalAlignment="Left" Margin="50,510,0,0" VerticalAlignment="Top" Width="125" Height="35" Click="rescanBtnClicked"/>
-        <Button Name="cancelBtn"  Content="Cancel" HorizontalAlignment="Left" Margin="480,510,0,0" VerticalAlignment="Top" Width="125" Height="35" Click="cancelBtnClicked"/>
+        <Button Name="RescanBtn" Content="Rescan" HorizontalAlignment="Left" Margin="50,510,0,0" VerticalAlignment="Top" Width="125" Height="35" Click="rescanBtnClicked"/>
+        <Button Name="CancelBtn"  Content="Cancel" HorizontalAlignment="Left" Margin="480,510,0,0" VerticalAlignment="Top" Width="125" Height="35" Click="cancelBtnClicked"/>
         <Button Content="Checkout" HorizontalAlignment="Left" Margin="625,510,0,0" VerticalAlignment="Top" Width="125" Height="35" Click="checkoutBtnClicked"/>
         <ListView Name="myList" HorizontalAlignment="Left" Height="360" Margin="50,76,0,0" VerticalAlignment="Top" Width="700">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Path=Name}" Width="200"/>
-                    <GridViewColumn Header="Quantity" DisplayMemberBinding="{Binding Path=Unit}" Width="200"/>
+                    <GridViewColumn Header="Quantity" DisplayMemberBinding="{Binding Path=Quantity}" Width="200"/>
                     <GridViewColumn Header="Price" DisplayMemberBinding="{Binding Path=Price, StringFormat=C}" Width="200"/>
                 </GridView>
             </ListView.View>
