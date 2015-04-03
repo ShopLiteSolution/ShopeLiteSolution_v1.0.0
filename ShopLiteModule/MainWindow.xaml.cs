@@ -31,6 +31,7 @@ namespace ShopLiteModule
         private ReaderConnection rCon;
         private ObservableCollection<Item> itemList;
         private double totalPrice;
+        private double totalWeight;
 
         public MainWindow()
         {
@@ -39,9 +40,11 @@ namespace ShopLiteModule
             _cancelEvent = new AutoResetEvent(false);
             itemList = new ObservableCollection<Item>();
             totalPrice = 0.0d;
+            totalWeight = 0.0d;
 
             CancelBtn.IsEnabled = false;
             RescanBtn.IsEnabled = false;
+            CheckoutBtn.IsEnabled = false;
             TimerStatusLbl.Content = "Welcome!";
             initImage();
             initDB();
@@ -95,8 +98,10 @@ namespace ShopLiteModule
 
             itemList = new ObservableCollection<Item>();
             totalPrice = 0.0d;
+            totalWeight = 0.0d;
             refreshList();
             rCon.existTags.Clear();
+            CheckoutBtn.IsEnabled = false;
 
             initBgWorker();
         }
@@ -125,24 +130,6 @@ namespace ShopLiteModule
             myList.ItemsSource = null;
             myList.ItemsSource = itemList;
         }
-
-        private void refreshList(DataTable data)
-        {
-            myList.ItemsSource = null;
-            myList.ItemsSource = data.DefaultView;
-            TotalPriceLbl.Content = calculateTotalPrice(data);
-        }
-
-        private string calculateTotalPrice(DataTable data) { 
-            string output = "";
-            double sum = 0.0d;
-            foreach(DataRow row in data.Rows){
-                sum += Double.Parse(Convert.ToString(row["Price"]));
-            }
-            output = sum.ToString("C2", CultureInfo.CurrentCulture);
-            return output;
-        }
-
         private void _workerDoWork(object sender, DoWorkEventArgs e)
         {
             BackgroundWorker worker = sender as BackgroundWorker;
@@ -180,10 +167,22 @@ namespace ShopLiteModule
             {
                 TimerStatusLbl.Content = "Finished scanning.";
                 CancelBtn.IsEnabled = false;
+                enableCheckout();
                 rCon.stopReader();
             }
         }
 
+        private void enableCheckout()
+        {
+            if (itemList.Count == 0)
+            {
+                TimerStatusLbl.Content = "Nothing is detected!";
+            }
+            else
+            {
+                CheckoutBtn.IsEnabled = true;
+            }
+        }
         private void _workerProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             if (e.ProgressPercentage < 100 && e.ProgressPercentage > 0 && !(sender as BackgroundWorker).CancellationPending)
@@ -215,10 +214,12 @@ namespace ShopLiteModule
                 newItem.Weight = Double.Parse((string)row.ItemArray[4]);
 
                 totalPrice += newItem.Price;
+                totalWeight += newItem.Weight;
                 App.Current.Dispatcher.Invoke((Action)delegate
                 {
                     itemList.Add(newItem);
                     TotalPriceLbl.Content = totalPrice.ToString("C2", CultureInfo.CurrentCulture);
+                    totalWeightLbl.Content = (totalWeight / 1000d).ToString() + " kg";
                 });
                 //Thread.Sleep(200);
             }
