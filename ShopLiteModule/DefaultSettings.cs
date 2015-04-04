@@ -17,6 +17,8 @@ namespace ShopLiteModule
         public static string OutputPower = "20";
         public static string ipAddress = "192.168.0.178";
         public static string ipPort = "4001";
+
+        public static double ErrorPercentage = 0.1d;
         
     }
 }

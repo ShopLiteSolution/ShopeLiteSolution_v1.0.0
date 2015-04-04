@@ -34,5 +34,12 @@ namespace ShopLiteModule
             con.Close();
             return datatable;
         }
+
+        public void RunQuery(string query)
+        {
+            con.Open();
+            SQLiteDataAdapter da = new SQLiteDataAdapter(query, con);
+            con.Close();
+        }
     }
 }

@@ -16,6 +16,7 @@ using System.Data;
 using System.Threading;
 using System.ComponentModel;
 using System.Globalization;
+using System.Collections.ObjectModel;
 
 namespace ShopLiteModule
 {
@@ -28,15 +29,35 @@ namespace ShopLiteModule
         private BackgroundWorker worker;
         private AutoResetEvent _cancelEvent;
         private ReaderConnection rCon;
+        private ObservableCollection<Item> itemList;
+        private double totalPrice;
+        private double totalWeight;
+        private bool sessionStart;
+        private double observedWeight;
+        private MotorConnection mCon;
 
         public MainWindow()
         {
-            _cancelEvent = new AutoResetEvent(false);
-
             InitializeComponent();
+
+            _cancelEvent = new AutoResetEvent(false);
+            itemList = new ObservableCollection<Item>();
+            totalPrice = 0.0d;
+            totalWeight = 0.0d;
+            observedWeight = 0.0d;
+            sessionStart = false;
+
+            CancelBtn.IsEnabled = false;
+            CheckoutBtn.IsEnabled = false;
+            TimerStatusLbl.Content = "Welcome!";
             initImage();
             initDB();
-            initBgWorker();
+
+            mCon = new MotorConnection(con);
+        }
+        private void OnAfterContentRendered(object sender, EventArgs e)
+        {
+            initReaderConnection();
         }
 
         private void initDB()
@@ -44,12 +65,15 @@ namespace ShopLiteModule
             con = new DBConnection();
             refreshList();
         }
-
         private void initImage()
         {
             LogoImage.Source = new BitmapImage(new Uri(@"/resources/ShopLiteSolutionLogo.jpg", UriKind.Relative));
         }
-
+        private void initReaderConnection()
+        {
+            rCon = new ReaderConnection();
+            rCon.Added += new AddEventHandler(newTagDetected);
+        }
         private void initBgWorker()
         {
             if (worker != null && worker.IsBusy)
@@ -57,8 +81,7 @@ namespace ShopLiteModule
                 worker.CancelAsync();
                 _cancelEvent.WaitOne();
             }
-
-            rCon = new ReaderConnection();
+            mCon.rotateMotor();
             worker = new BackgroundWorker();
 
             worker.WorkerReportsProgress = true;
@@ -72,13 +95,36 @@ namespace ShopLiteModule
 
         private void checkoutBtnClicked(object sender, RoutedEventArgs e)
         {
+            //TODO
         }
-
         private void rescanBtnClicked(object sender, RoutedEventArgs e)
         {
+            Console.Out.WriteLine("rescan button is clicked");
+            if (!sessionStart)
+            {
+                CustomDialog customDialog = new CustomDialog("Enter Weight", "Please enter the weight (Kg): ", "0.0", CustomDialog.DialogType.EnterWeight);
+                customDialog.Owner = this;
+                if (customDialog.ShowDialog() == true)
+                {
+                    sessionStart = true;
+                    observedWeight = Convert.ToDouble(customDialog.Answer);
+                    initBgWorker();
+                }
+                return;
+            }
+
+            if (rCon != null && rCon.isReading()) rCon.stopReader();
+            if (mCon != null && mCon.isMotorRunning) mCon.stopMotor();
+         
+            itemList = new ObservableCollection<Item>();
+            totalPrice = 0.0d;
+            totalWeight = 0.0d;
+            refreshList();
+            rCon.existTags.Clear();
+            CheckoutBtn.IsEnabled = false;
+
             initBgWorker();
         }
-
         private void cancelBtnClicked(object sender, RoutedEventArgs e)
         {
             if (worker != null && worker.IsBusy)
@@ -86,8 +132,10 @@ namespace ShopLiteModule
                 Console.Out.WriteLine("cancel button clicked"); 
                 worker.CancelAsync();
                 _cancelEvent.WaitOne();
-                Console.Out.WriteLine("cancel event returned to main thread");
-                cancelBtn.Visibility = Visibility.Hidden;
+
+                rCon.stopReader();
+                mCon.stopMotor();
+                CancelBtn.IsEnabled = false;
                 TimerStatusLbl.Content = "Scanning cancelled!";
                 Timer.Value = 0;
             }
@@ -95,34 +143,17 @@ namespace ShopLiteModule
 
         private void AskforassistBtn_clicked(object sender, RoutedEventArgs e)
         {
-            refreshList();
+            String display = "The assistant is coming. Thank you for you patience!";
+            CustomDialog customDialog = new CustomDialog("Ask for assistant", display, "", CustomDialog.DialogType.AskForAssistance);
+            customDialog.Owner = this;
+            if (customDialog.ShowDialog() == false) { }
         }
 
-        private void refreshList() {
-            myList.ItemsSource = null;
-            DataTable data = con.MyDataTable("SELECT * FROM Itemlist");
-            myList.ItemsSource = data.DefaultView;
-            TotalPriceLbl.Content = calculateTotalPrice(data);
-            //Console.Out.WriteLine(data.Rows[0]["Price"]);
-        }
-
-        private void refreshList(DataTable data)
+        private void refreshList()
         {
             myList.ItemsSource = null;
-            myList.ItemsSource = data.DefaultView;
-            TotalPriceLbl.Content = calculateTotalPrice(data);
+            myList.ItemsSource = itemList;
         }
-
-        private string calculateTotalPrice(DataTable data) { 
-            string output = "";
-            double sum = 0.0d;
-            foreach(DataRow row in data.Rows){
-                sum += Double.Parse(System.Convert.ToString(row["Price"]));
-            }
-            output = sum.ToString("C2", CultureInfo.CurrentCulture);
-            return output;
-        }
-
         private void _workerDoWork(object sender, DoWorkEventArgs e)
         {
             BackgroundWorker worker = sender as BackgroundWorker;
@@ -136,10 +167,6 @@ namespace ShopLiteModule
                 }
                 else
                 {
-                    // TODO:
-                    // use Reader.dll to scan tags
-                    // check db with serialIDs
-                    // refresh the list: refreshList(DataTable data)
                     if (i % 10 == 0)
                     {
                         rCon.RealTimeInventory();
@@ -155,7 +182,6 @@ namespace ShopLiteModule
         {
             if (e.Cancelled == true)
             {
-
             }
             else if (!(e.Error == null))
             {
@@ -164,26 +190,78 @@ namespace ShopLiteModule
             else
             {
                 TimerStatusLbl.Content = "Finished scanning.";
-                cancelBtn.Visibility = Visibility.Hidden;
+                CancelBtn.IsEnabled = false;
+                enableCheckout();
+                rCon.stopReader();
+                mCon.stopMotor();
             }
-            rCon.DisconnectTcp();
         }
 
+        private void enableCheckout()
+        {
+            if (!checkWeight())
+            {
+                CustomDialog dialog = new CustomDialog("Error", 
+                    "Observed weight and the total scanned items weight not match! You can choose to rescan or ask for assistance", "", CustomDialog.DialogType.Error);
+                if (dialog.ShowDialog() == false) { }
+                TimerStatusLbl.Content = "Please rescan!";
+                return;
+            }
+            if (itemList.Count == 0)
+            {
+                CustomDialog dialog = new CustomDialog("Error", "Nothing is found after scanning.","",CustomDialog.DialogType.Error);
+                if (dialog.ShowDialog() == false) { }
+                TimerStatusLbl.Content = "Nothing is detected!";
+                return;
+            }
+            
+            CheckoutBtn.IsEnabled = true;
+           
+        }
+
+        private bool checkWeight()
+        {
+            double errorRange = observedWeight * DefaultSettings.ErrorPercentage;
+            if ((totalWeight / 1000d) < (observedWeight - errorRange) || (totalWeight / 1000d) > (observedWeight + errorRange))
+            {
+                return false;
+            }
+            return true;
+        }
         private void _workerProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             if (e.ProgressPercentage < 100 && e.ProgressPercentage > 0 && !(sender as BackgroundWorker).CancellationPending)
             {
                 TimerStatusLbl.Content = "Scanning...";
-                cancelBtn.Visibility = Visibility.Visible;
+                CancelBtn.IsEnabled = true;
+                RescanBtn.IsEnabled = true;
             }
             Timer.Value = e.ProgressPercentage;
+        }
 
-            if ((sender as BackgroundWorker).CancellationPending)
+        private void newTagDetected(object sender, SetAddEventArgs e)
+        {
+            //Console.Out.WriteLine("UI gets event: " + e.newEntry as string);
+            DataTable newItems = con.MyDataTable("SELECT * FROM Itemlist where SerialID = \"" + e.newEntry as string + "\"");
+            Item newItem;
+            foreach (DataRow row in newItems.Rows)
             {
-                //TODO: clean the list view
-            }
-            
+                newItem = new Item();
+                newItem.SerialID = (string)row.ItemArray[0];
+                newItem.Name = (string)row.ItemArray[1];
+                newItem.Price = (double)row.ItemArray[2];
+                newItem.Quantity = Int32.Parse((string)row.ItemArray[3]);
+                newItem.Weight = Double.Parse((string)row.ItemArray[4]);
 
+                totalPrice += newItem.Price;
+                totalWeight += newItem.Weight;
+                App.Current.Dispatcher.Invoke((Action)delegate
+                {
+                    itemList.Add(newItem);
+                    TotalPriceLbl.Content = totalPrice.ToString("C2", CultureInfo.CurrentCulture);
+                });
+                //Thread.Sleep(200);
+            }
         }
     }
 }
