@@ -32,6 +32,9 @@ namespace ShopLiteModule
         private ObservableCollection<Item> itemList;
         private double totalPrice;
         private double totalWeight;
+        private bool sessionStart;
+        private double observedWeight;
+        private MotorConnection mCon;
 
         public MainWindow()
         {
@@ -41,13 +44,16 @@ namespace ShopLiteModule
             itemList = new ObservableCollection<Item>();
             totalPrice = 0.0d;
             totalWeight = 0.0d;
+            observedWeight = 0.0d;
+            sessionStart = false;
 
             CancelBtn.IsEnabled = false;
-            RescanBtn.IsEnabled = false;
             CheckoutBtn.IsEnabled = false;
             TimerStatusLbl.Content = "Welcome!";
             initImage();
             initDB();
+
+            mCon = new MotorConnection(con);
         }
         private void OnAfterContentRendered(object sender, EventArgs e)
         {
@@ -75,7 +81,7 @@ namespace ShopLiteModule
                 worker.CancelAsync();
                 _cancelEvent.WaitOne();
             }
-
+            mCon.rotateMotor();
             worker = new BackgroundWorker();
 
             worker.WorkerReportsProgress = true;
@@ -94,8 +100,22 @@ namespace ShopLiteModule
         private void rescanBtnClicked(object sender, RoutedEventArgs e)
         {
             Console.Out.WriteLine("rescan button is clicked");
-            if (rCon.isReading()) rCon.stopReader();
+            if (!sessionStart)
+            {
+                CustomDialog customDialog = new CustomDialog("Enter Weight", "Please enter the weight (Kg): ", "0.0", CustomDialog.DialogType.EnterWeight);
+                customDialog.Owner = this;
+                if (customDialog.ShowDialog() == true)
+                {
+                    sessionStart = true;
+                    observedWeight = Convert.ToDouble(customDialog.Answer);
+                    initBgWorker();
+                }
+                return;
+            }
 
+            if (rCon != null && rCon.isReading()) rCon.stopReader();
+            if (mCon != null && mCon.isMotorRunning) mCon.stopMotor();
+         
             itemList = new ObservableCollection<Item>();
             totalPrice = 0.0d;
             totalWeight = 0.0d;
@@ -114,6 +134,7 @@ namespace ShopLiteModule
                 _cancelEvent.WaitOne();
 
                 rCon.stopReader();
+                mCon.stopMotor();
                 CancelBtn.IsEnabled = false;
                 TimerStatusLbl.Content = "Scanning cancelled!";
                 Timer.Value = 0;
@@ -122,7 +143,10 @@ namespace ShopLiteModule
 
         private void AskforassistBtn_clicked(object sender, RoutedEventArgs e)
         {
-            initBgWorker();
+            String display = "The assistant is coming. Thank you for you patience!";
+            CustomDialog customDialog = new CustomDialog("Ask for assistant", display, "", CustomDialog.DialogType.AskForAssistance);
+            customDialog.Owner = this;
+            if (customDialog.ShowDialog() == false) { }
         }
 
         private void refreshList()
@@ -169,19 +193,40 @@ namespace ShopLiteModule
                 CancelBtn.IsEnabled = false;
                 enableCheckout();
                 rCon.stopReader();
+                mCon.stopMotor();
             }
         }
 
         private void enableCheckout()
         {
+            if (!checkWeight())
+            {
+                CustomDialog dialog = new CustomDialog("Error", 
+                    "Observed weight and the total scanned items weight not match! You can choose to rescan or ask for assistance", "", CustomDialog.DialogType.Error);
+                if (dialog.ShowDialog() == false) { }
+                TimerStatusLbl.Content = "Please rescan!";
+                return;
+            }
             if (itemList.Count == 0)
             {
+                CustomDialog dialog = new CustomDialog("Error", "Nothing is found after scanning.","",CustomDialog.DialogType.Error);
+                if (dialog.ShowDialog() == false) { }
                 TimerStatusLbl.Content = "Nothing is detected!";
+                return;
             }
-            else
+            
+            CheckoutBtn.IsEnabled = true;
+           
+        }
+
+        private bool checkWeight()
+        {
+            double errorRange = observedWeight * DefaultSettings.ErrorPercentage;
+            if ((totalWeight / 1000d) < (observedWeight - errorRange) || (totalWeight / 1000d) > (observedWeight + errorRange))
             {
-                CheckoutBtn.IsEnabled = true;
+                return false;
             }
+            return true;
         }
         private void _workerProgressChanged(object sender, ProgressChangedEventArgs e)
         {
@@ -192,11 +237,6 @@ namespace ShopLiteModule
                 RescanBtn.IsEnabled = true;
             }
             Timer.Value = e.ProgressPercentage;
-
-            if ((sender as BackgroundWorker).CancellationPending)
-            {
-                //TODO: clean the list view
-            }
         }
 
         private void newTagDetected(object sender, SetAddEventArgs e)
@@ -219,7 +259,6 @@ namespace ShopLiteModule
                 {
                     itemList.Add(newItem);
                     TotalPriceLbl.Content = totalPrice.ToString("C2", CultureInfo.CurrentCulture);
-                    totalWeightLbl.Content = (totalWeight / 1000d).ToString() + " kg";
                 });
                 //Thread.Sleep(200);
             }

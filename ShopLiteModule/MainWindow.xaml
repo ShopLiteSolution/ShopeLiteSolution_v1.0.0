@@ -22,7 +22,5 @@
         <Label Name="TotalPriceLbl" HorizontalAlignment="Left" Margin="625,455,0,0" VerticalAlignment="Top" Height="35" Width="125"/>
         <ProgressBar Name="Timer" HorizontalAlignment="Left" Height="12" Margin="650,50,0,0" VerticalAlignment="Top" Width="100"/>
         <Label Name="TimerStatusLbl" HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="16.5,1.308" Margin="645,24,0,0"/>
-        <Label Name="totalWeightLbl" Content="0" HorizontalAlignment="Left" Margin="249,464,0,0" VerticalAlignment="Top" Width="105"/>
-
     </Grid>
 </Window>

@@ -62,7 +62,11 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="CCommondMethod.cs" />
+    <Compile Include="CustomDialog.xaml.cs">
+      <DependentUpon>CustomDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Item.cs" />
+    <Compile Include="MotorConnection.cs" />
     <Compile Include="SetAddEventArgs.cs" />
     <Compile Include="DefaultSettings.cs" />
     <Compile Include="InventoryBuffer.cs" />
@@ -72,6 +76,10 @@
     <Compile Include="ReaderSetting.cs" />
     <Compile Include="ScaleConnection.cs" />
     <Compile Include="SyncedSet.cs" />
+    <Page Include="CustomDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -123,6 +131,9 @@
     <Content Include="lib\SQLite.dll" />
     <Content Include="lib\SQLite.NET.dll" />
     <Content Include="lib\SQLite3.dll" />
+    <Resource Include="resources\error.png" />
+    <Resource Include="resources\afa.png" />
+    <Resource Include="resources\weight.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
