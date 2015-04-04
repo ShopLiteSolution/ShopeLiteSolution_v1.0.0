@@ -107,6 +107,7 @@ namespace ShopLiteModule
                 if (customDialog.ShowDialog() == true)
                 {
                     sessionStart = true;
+                    RescanBtn.Content = "Rescan";
                     observedWeight = Convert.ToDouble(customDialog.Answer);
                     initBgWorker();
                 }

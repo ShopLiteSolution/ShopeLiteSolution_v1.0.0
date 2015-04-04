@@ -32,15 +32,15 @@ namespace ShopLiteModule
                 foreach (string port in ports)
                 {
                     currentPort = new SerialPort(port, 9600);
-                    if (rotateMotor())
-                    {
-                        portFound = true;
-                        break;
-                    }
-                    else
-                    {
-                        portFound = false;
-                    }
+                    //if (rotateMotor())
+                    //{
+                    //    portFound = true;
+                    //    break;
+                    //}
+                    //else
+                    //{
+                    //    portFound = false;
+                    //}
                 }
             }
             catch (Exception e)
@@ -54,17 +54,24 @@ namespace ShopLiteModule
             {
                 //The below setting are for the Hello handshake
                 byte[] buffer = new byte[5];
-                //buffer[0] = Convert.ToByte('1'); // header bit
-                // command bit
-
-                buffer[0] = Convert.ToByte('A'); // 90 CW, 90 CCW
-                buffer[1] = Convert.ToByte(readPrevCount()); // 90 CW, 90 CCW
 
                 currentPort.Open();
-                currentPort.Write(buffer, 0, 2);
-                int count =  currentPort.BytesToRead;
+                buffer[0] = Convert.ToByte(1); // 90 CW, 90 CCW
+                currentPort.Write(buffer, 0, 4);
+                int count = currentPort.BytesToRead;
+                while (count > 0)
+                { //clear all the info in port
+                    int result = currentPort.ReadByte();
+                    Console.Out.WriteLine("Bytes read while rotating: " + result);
+                    count--;
+                }
+
+                buffer[0] = Convert.ToByte(readPrevCount()); // 90 CW, 90 CCW
+                currentPort.Write(buffer, 0, 1);
+                count = currentPort.BytesToRead;
                 while(count > 0){ //clear all the info in port
-                    currentPort.ReadByte();
+                    int result = currentPort.ReadByte();
+                    Console.Out.WriteLine("Bytes read while rotating: " + result);
                     count--;
                 }
                 currentPort.Close();
@@ -82,7 +89,7 @@ namespace ShopLiteModule
             try
             {
                 byte[] buffer = new byte[5];
-                buffer[0] = Convert.ToByte('S'); //Stop byte
+                buffer[0] = Convert.ToByte(2); //Stop byte
                 
                 currentPort.Open();
                 currentPort.Write(buffer, 0, 1);
