@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO.Ports;
 using System.Data;
+using System.Threading;
 
 namespace ShopLiteModule
 {
@@ -14,9 +15,11 @@ namespace ShopLiteModule
         private DBConnection con;
         SerialPort currentPort;
         bool portFound;
-        
+        bool shouldFlip;
+
         public MotorConnection(DBConnection dbCon)
         {
+            shouldFlip = false;
             isMotorRunning = false;
             con = dbCon;
             currentPort = new SerialPort();
@@ -32,15 +35,6 @@ namespace ShopLiteModule
                 foreach (string port in ports)
                 {
                     currentPort = new SerialPort(port, 9600);
-                    //if (rotateMotor())
-                    //{
-                    //    portFound = true;
-                    //    break;
-                    //}
-                    //else
-                    //{
-                    //    portFound = false;
-                    //}
                 }
             }
             catch (Exception e)
@@ -54,25 +48,38 @@ namespace ShopLiteModule
             {
                 //The below setting are for the Hello handshake
                 byte[] buffer = new byte[5];
-
+                int prevCount = 0;
+                if (shouldFlip)
+                {
+                    prevCount = 512 - readPrevCount();
+                }
+                else
+                {
+                    prevCount = readPrevCount();
+                }
+                shouldFlip = !shouldFlip;
+                //int prevCount = readPrevCount();
                 currentPort.Open();
-                buffer[0] = Convert.ToByte(1); // 90 CW, 90 CCW
-                currentPort.Write(buffer, 0, 4);
-                int count = currentPort.BytesToRead;
-                while (count > 0)
-                { //clear all the info in port
-                    int result = currentPort.ReadByte();
-                    Console.Out.WriteLine("Bytes read while rotating: " + result);
-                    count--;
+                buffer[0] = (byte)(prevCount / 256);
+                currentPort.Write(buffer, 0, 1);
+                while (currentPort.BytesToRead == 0) {
+                    //wait until "A" bytes come back
+                }
+                
+                if(currentPort.ReadExisting() != "A"){
+                    return false;
                 }
 
-                buffer[0] = Convert.ToByte(readPrevCount()); // 90 CW, 90 CCW
-                currentPort.Write(buffer, 0, 1);
-                count = currentPort.BytesToRead;
-                while(count > 0){ //clear all the info in port
-                    int result = currentPort.ReadByte();
-                    Console.Out.WriteLine("Bytes read while rotating: " + result);
-                    count--;
+                buffer[1] = (byte)(prevCount % 256);
+                currentPort.Write(buffer, 1, 1);
+
+                while (currentPort.BytesToRead == 0)
+                {
+                    //wait until "A" bytes come back
+                }
+                int count = currentPort.BytesToRead;
+                if(count > 0){ //clear all the info in port
+                    Console.Out.WriteLine("calculated count: "+ currentPort.ReadLine());
                 }
                 currentPort.Close();
                 isMotorRunning = true;
@@ -89,22 +96,25 @@ namespace ShopLiteModule
             try
             {
                 byte[] buffer = new byte[5];
-                buffer[0] = Convert.ToByte(2); //Stop byte
+                buffer[0] = Convert.ToByte('S'); //Stop byte
                 
                 currentPort.Open();
                 currentPort.Write(buffer, 0, 1);
+                while (currentPort.BytesToRead == 0) {
+                    //wait until bytes come back
+                }
+                String number = "0";
                 int count = currentPort.BytesToRead;
-                int returnMessage = 0;
-                while (count > 0)//TODO : check this mechanism
+                if (currentPort.BytesToRead > 0)
                 {
-                    returnMessage = currentPort.ReadByte();
-                    Console.Out.WriteLine("Motor stopped at position: " + returnMessage);
-                    count--;
+                    number = currentPort.ReadExisting();
                 }
                 currentPort.Close();
-                savePrevCount(returnMessage);
+
+                int prevCount = Convert.ToInt32(number);
+                savePrevCount(prevCount);
                 isMotorRunning = false;
-                return returnMessage;
+                return prevCount;
             }
             catch (Exception e)
             {
@@ -121,18 +131,31 @@ namespace ShopLiteModule
                 prevCount = Convert.ToInt32(row["Position"].ToString());
                 Console.Out.WriteLine("prevCount value is found in database: " + prevCount);
             }
-            con.RunQuery("DELETE * FROM Motor"); // clear up database
+            con.MyDataTable("DELETE FROM Motor");
             if (prevCount == -1)
             {
                 prevCount = 0;
+            }
+            if (prevCount >= 512)
+            {
+                prevCount = 511;
             }
             return prevCount;
         }
 
         private void savePrevCount(int prevCount)
         {
-            con.RunQuery("INSET INTO Motor Values(" + prevCount + ")");
-            Console.Out.WriteLine("prevCount value is updated in database");
+            if (prevCount == -1)
+            {
+                prevCount = 0;
+            }
+            if (prevCount >= 512)
+            {
+                prevCount = 511;
+            }
+            Console.Out.WriteLine("prevCount saved with " + prevCount);
+            con.MyDataTable("INSERT INTO Motor Values(" + prevCount + ")");     
         }
     }
 }
+    

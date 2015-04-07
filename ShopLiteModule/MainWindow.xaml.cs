@@ -99,7 +99,7 @@ namespace ShopLiteModule
         }
         private void rescanBtnClicked(object sender, RoutedEventArgs e)
         {
-            Console.Out.WriteLine("rescan button is clicked");
+            //Console.Out.WriteLine("rescan button is clicked");
             if (!sessionStart)
             {
                 CustomDialog customDialog = new CustomDialog("Enter Weight", "Please enter the weight (Kg): ", "0.0", CustomDialog.DialogType.EnterWeight);
@@ -130,7 +130,7 @@ namespace ShopLiteModule
         {
             if (worker != null && worker.IsBusy)
             {
-                Console.Out.WriteLine("cancel button clicked"); 
+                //Console.Out.WriteLine("cancel button clicked"); 
                 worker.CancelAsync();
                 _cancelEvent.WaitOne();
 
@@ -192,9 +192,9 @@ namespace ShopLiteModule
             {
                 TimerStatusLbl.Content = "Finished scanning.";
                 CancelBtn.IsEnabled = false;
-                enableCheckout();
                 rCon.stopReader();
                 mCon.stopMotor();
+                enableCheckout();
             }
         }
 
