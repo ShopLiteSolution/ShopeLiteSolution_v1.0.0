@@ -99,7 +99,6 @@ namespace ShopLiteModule
         }
         private void rescanBtnClicked(object sender, RoutedEventArgs e)
         {
-            //Console.Out.WriteLine("rescan button is clicked");
             if (!sessionStart)
             {
                 CustomDialog customDialog = new CustomDialog("Enter Weight", "Please enter the weight (Kg): ", "0.0", CustomDialog.DialogType.EnterWeight);
@@ -111,20 +110,27 @@ namespace ShopLiteModule
                     observedWeight = Convert.ToDouble(customDialog.Answer);
                     initBgWorker();
                 }
+
+                if (rCon != null && rCon.isReading()) rCon.stopReader();
+                if (mCon != null && mCon.isMotorRunning) mCon.stopMotor();
+
+                itemList = new ObservableCollection<Item>();
+                totalPrice = 0.0d;
+                totalWeight = 0.0d;
+                refreshList();
+                rCon.existTags.Clear();
+                CheckoutBtn.IsEnabled = false;
+
+                initBgWorker();
                 return;
             }
-
-            if (rCon != null && rCon.isReading()) rCon.stopReader();
-            if (mCon != null && mCon.isMotorRunning) mCon.stopMotor();
-         
-            itemList = new ObservableCollection<Item>();
-            totalPrice = 0.0d;
-            totalWeight = 0.0d;
-            refreshList();
-            rCon.existTags.Clear();
-            CheckoutBtn.IsEnabled = false;
-
-            initBgWorker();
+            else
+            {
+                CustomDialog dialog = new CustomDialog("Error",
+                    "Please cancal the current scan before rescanning", "", CustomDialog.DialogType.Error);
+                dialog.Owner = this;
+                if (dialog.ShowDialog() == false) { }
+            }
         }
         private void cancelBtnClicked(object sender, RoutedEventArgs e)
         {
@@ -195,6 +201,7 @@ namespace ShopLiteModule
                 rCon.stopReader();
                 mCon.stopMotor();
                 enableCheckout();
+                sessionStart = false;
             }
         }
 
@@ -204,6 +211,7 @@ namespace ShopLiteModule
             {
                 CustomDialog dialog = new CustomDialog("Error", 
                     "Observed weight and the total scanned items weight not match! You can choose to rescan or ask for assistance", "", CustomDialog.DialogType.Error);
+                dialog.Owner = this;
                 if (dialog.ShowDialog() == false) { }
                 TimerStatusLbl.Content = "Please rescan!";
                 return;
@@ -211,6 +219,7 @@ namespace ShopLiteModule
             if (itemList.Count == 0)
             {
                 CustomDialog dialog = new CustomDialog("Error", "Nothing is found after scanning.","",CustomDialog.DialogType.Error);
+                dialog.Owner = this;
                 if (dialog.ShowDialog() == false) { }
                 TimerStatusLbl.Content = "Nothing is detected!";
                 return;
