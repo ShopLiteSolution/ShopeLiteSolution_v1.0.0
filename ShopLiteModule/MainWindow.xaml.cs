@@ -32,6 +32,7 @@ namespace ShopLiteModule
         private ObservableCollection<Item> itemList;
         private double totalPrice;
         private double totalWeight;
+        private int totalItem;
         private bool sessionStart;
         private double observedWeight;
         private MotorConnection mCon;
@@ -44,6 +45,7 @@ namespace ShopLiteModule
             itemList = new ObservableCollection<Item>();
             totalPrice = 0.0d;
             totalWeight = 0.0d;
+            totalItem = 0;
             observedWeight = 0.0d;
             sessionStart = false;
 
@@ -116,6 +118,7 @@ namespace ShopLiteModule
 
                 itemList = new ObservableCollection<Item>();
                 totalPrice = 0.0d;
+                totalItem = 0;
                 totalWeight = 0.0d;
                 refreshList();
                 rCon.existTags.Clear();
@@ -141,6 +144,7 @@ namespace ShopLiteModule
                 _cancelEvent.WaitOne();
 
                 rCon.stopReader();
+                sessionStart = false;
                 mCon.stopMotor();
                 CancelBtn.IsEnabled = false;
                 TimerStatusLbl.Content = "Scanning cancelled!";
@@ -232,7 +236,23 @@ namespace ShopLiteModule
         private bool checkWeight()
         {
             double errorRange = observedWeight * DefaultSettings.ErrorPercentage;
-            if ((totalWeight / 1000d) < (observedWeight - errorRange) || (totalWeight / 1000d) > (observedWeight + errorRange))
+            
+            if (observedWeight < 7.0d){
+                errorRange = observedWeight * DefaultSettings.LightErrorP;
+            }
+            else
+            {
+                errorRange = observedWeight * DefaultSettings.HeavyErrorP;
+            }
+            if (errorRange <= DefaultSettings.minimunRange)
+            {
+                errorRange = DefaultSettings.minimunRange;
+            }
+            Console.Out.WriteLine("Calculated: " + totalWeight/1000d);
+            Console.Out.WriteLine("Read: " + observedWeight);
+            Console.Out.WriteLine("Error range: " + errorRange);
+
+            if ((totalWeight/1000d) < (observedWeight - errorRange) || (totalWeight/1000d) > (observedWeight + errorRange))
             {
                 return false;
             }
@@ -262,13 +282,20 @@ namespace ShopLiteModule
                 newItem.Price = (double)row.ItemArray[2];
                 newItem.Quantity = Int32.Parse((string)row.ItemArray[3]);
                 newItem.Weight = Double.Parse((string)row.ItemArray[4]);
-
+                if (newItem.SerialID == "E2003000040F013725001C79")
+                {
+                    //detected cart
+                    observedWeight -= (newItem.Weight / 1000d);
+                    return;
+                }
                 totalPrice += newItem.Price;
                 totalWeight += newItem.Weight;
+                totalItem += 1;
                 App.Current.Dispatcher.Invoke((Action)delegate
                 {
                     itemList.Add(newItem);
                     TotalPriceLbl.Content = totalPrice.ToString("C2", CultureInfo.CurrentCulture);
+                    itemCount.Content = totalItem.ToString();
                 });
                 //Thread.Sleep(200);
             }

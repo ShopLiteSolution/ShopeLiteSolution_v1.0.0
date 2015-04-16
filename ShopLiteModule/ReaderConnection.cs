@@ -121,6 +121,7 @@ namespace ShopLiteModule
         }
         private void SetOutputPower(string txtOutputPower)
         {
+            txtOutputPower = DefaultSettings.OutputPower;
             Console.Out.WriteLine("trying to set output power");
             try
             {
@@ -197,7 +198,7 @@ namespace ShopLiteModule
                 m_curInventoryBuffer.btRepeat = Convert.ToByte(1);
                 m_curInventoryBuffer.bLoopCustomizedSession = false;
                 m_curInventoryBuffer.lAntenna.Add(0x00);
-                //TODO: m_curInventoryBuffer.lAntenna.Add(0x01);
+                m_curInventoryBuffer.lAntenna.Add(0x01);
 
                 m_bInventory = true;
                 m_curInventoryBuffer.bLoopInventory = true;
@@ -398,6 +399,7 @@ namespace ShopLiteModule
                 string strEPC = CCommondMethod.ByteArrayToStringNoSpace(msgTran.AryData, 3, nEpcLength);
                 if (!existTags.Contains(strEPC))
                 {
+                    //Console.Out.WriteLine("Chocolate " + strEPC);
                     existTags.AddSafe(strEPC);
                 }
                 string strPC = CCommondMethod.ByteArrayToString(msgTran.AryData, 1, 2);
@@ -417,7 +419,7 @@ namespace ShopLiteModule
         private delegate void RefreshInventoryRealUnsafe(byte btCmd);
         private void RefreshInventoryReal(byte btCmd)
         {
-            if (!App.Current.Dispatcher.CheckAccess())
+            if (!App.Current.Dispatcher.CheckAccess()) 
             {
                 RefreshInventoryRealUnsafe InvokeRefresh = new RefreshInventoryRealUnsafe(RefreshInventoryReal);
                 App.Current.Dispatcher.Invoke(InvokeRefresh, new object[] { btCmd });
